@@ -45,7 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateIcon() {
         let name = PinManager.shared.pins.isEmpty ? "pin" : "pin.fill"
-        statusItem.button?.image = NSImage(systemSymbolName: name, accessibilityDescription: "FloatPin")
+        statusItem.button?.image = NSImage(systemSymbolName: name, accessibilityDescription: "FloatPin Lite")
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -102,7 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(makeItem("Permissions…", #selector(showOnboarding)))
         menu.addItem(makeItem("Settings…", #selector(showSettings), key: ","))
         menu.addItem(.separator())
-        menu.addItem(makeItem("Quit FloatPin", #selector(quit), key: "q"))
+        menu.addItem(makeItem("Quit FloatPin Lite", #selector(quit), key: "q"))
     }
 
     private func makeItem(_ title: String, _ action: Selector, key: String = "") -> NSMenuItem {

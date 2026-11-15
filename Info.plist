@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleIdentifier</key>
-    <string>com.abhinxx.FloatPin</string>
+    <string>com.abhinxx.FloatPinLite</string>
     <key>CFBundleName</key>
-    <string>FloatPin</string>
+    <string>FloatPin Lite</string>
     <key>CFBundleDisplayName</key>
-    <string>FloatPin</string>
+    <string>FloatPin Lite</string>
     <key>CFBundleExecutable</key>
-    <string>FloatPin</string>
+    <string>FloatPinLite</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>

@@ -2,7 +2,7 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 
-/// Checks and requests the two permissions FloatPin needs.
+/// Checks and requests the two permissions FloatPin Lite needs.
 enum Permissions {
     /// Accessibility: lets us raise/focus other apps' windows.
     static var accessibility: Bool { AXIsProcessTrusted() }
@@ -13,7 +13,7 @@ enum Permissions {
     static var allGranted: Bool { accessibility && screenRecording }
 
     static func requestAccessibility() {
-        // Passing the prompt option adds FloatPin to the list in System Settings
+        // Passing the prompt option adds FloatPin Lite to the list in System Settings
         // and shows the system dialog the first time.
         let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
         if !AXIsProcessTrustedWithOptions(options) {

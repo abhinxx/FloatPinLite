@@ -12,7 +12,7 @@ private func text(_ s: String, small: Bool = false, bold: Bool = false) -> NSTex
     return t
 }
 
-private func window(_ title: String, _ rows: [NSView]) -> NSWindow {
+private func makeWindow(_ title: String, _ rows: [NSView]) -> NSWindow {
     let s = NSStackView(views: rows)
     s.orientation = .vertical
     s.alignment = .leading
@@ -43,8 +43,8 @@ final class PermissionsWindow: NSObject {
         let done = NSButton(title: "Done", target: nil, action: nil)
         done.keyEquivalent = "\r"
         let relaunch = NSButton(title: "Relaunch", target: nil, action: nil)
-        window = FloatPin.window("FloatPin Setup", [
-            text("Shake a window to keep it on top. FloatPin needs two permissions for that.", bold: true),
+        window = makeWindow("FloatPin Lite Setup", [
+            text("Shake a window to keep it on top. FloatPin Lite needs two permissions for that.", bold: true),
             text("Accessibility: moves the real window under its pin and brings it forward on click.", small: true),
             NSStackView(views: [axStatus, axButton]),
             text("Screen Recording: shows a live copy of the pinned window. Frames stay in memory; nothing is saved or sent.", small: true),
@@ -93,7 +93,7 @@ final class SettingsWindow: NSObject {
         fps.selectItem(at: rate <= 15 ? 0 : rate <= 30 ? 1 : 2)
         let fpsRow = NSStackView(views: [NSTextField(labelWithString: "Frame rate"), fps])
 
-        window = FloatPin.window("FloatPin Settings", [
+        window = makeWindow("FloatPin Lite Settings", [
             DefaultsCheck("Shake a window to pin it", key: K.shakeEnabled),
             DefaultsCheck("Pin the front window with ⌃⌥P", key: K.hotkeyEnabled),
             DefaultsCheck("Click-through (clicks pass to what's behind a pin)", key: K.clickThrough),
