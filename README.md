@@ -2,11 +2,9 @@
 
 **Pin any window always on top on macOS.** Shake a window and it floats above every other app until you shake it again. A free, open-source menu bar app for macOS 14+, and a leaner alternative to Floaty and Afloat. No dependencies, no network.
 
-FloatPin Lite is the slimmed-down version of [FloatPin](https://github.com/Tron16/FloatPin).
+FloatPin Lite is a fork of [Tron16/FloatPin](https://github.com/Tron16/FloatPin) (MIT): same idea and behavior, with the extras removed so it is smaller, lighter and builds with just the command line tools.
 
-This is a fork of Tron16/FloatPin (MIT). Same idea and same behavior, with the extras removed so it is smaller, lighter and builds with just the command line tools.
-
-![FloatPin Lite pinning a Safari window above Activity Monitor, which shows 18.7 MB memory](docs/proof.png)
+![FloatPin Lite pinning a YouTube window above Activity Monitor, which shows 18.7 MB memory](docs/proof.png)
 
 A YouTube window pinned on top of Activity Monitor, which lists FloatPin Lite at 18.7 MB.
 
