@@ -1,6 +1,8 @@
 # FloatPin Lite
 
-The leaner version of [FloatPin](https://github.com/Tron16/FloatPin). Shake a window to keep it on top. macOS 14+ menu bar app, no dependencies, no network.
+**Pin any window always on top on macOS.** Shake a window and it floats above every other app until you shake it again. A free, open-source menu bar app for macOS 14+, and a leaner alternative to Floaty and Afloat. No dependencies, no network.
+
+FloatPin Lite is the slimmed-down version of [FloatPin](https://github.com/Tron16/FloatPin).
 
 This is a fork of Tron16/FloatPin (MIT). Same idea and same behavior, with the extras removed so it is smaller, lighter and builds with just the command line tools.
 
@@ -16,7 +18,7 @@ git clone https://github.com/abhinxx/FloatPinLite && cd FloatPinLite && ./build.
 
 Builds, installs to `/Applications` and launches. Needs only the Xcode command line tools (`xcode-select --install`), not full Xcode. `./build.sh` alone builds into `./build`.
 
-## Use
+## How to keep a window on top on a Mac
 
 - Drag a window by its title bar and shake it: it floats above everything until you shake it again.
 - ⌃⌥P pins or unpins the front window. The menu bar lists all windows too.
