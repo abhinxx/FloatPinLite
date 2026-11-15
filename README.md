@@ -4,6 +4,10 @@ The leaner version of [FloatPin](https://github.com/Tron16/FloatPin). Shake a wi
 
 This is a fork of Tron16/FloatPin (MIT). Same idea and same behavior, with the extras removed so it is smaller, lighter and builds with just the command line tools.
 
+![FloatPin Lite pinning a Safari window above Activity Monitor, which shows 18.7 MB memory](docs/proof.png)
+
+A YouTube window pinned on top of Activity Monitor, which lists FloatPin Lite at 18.7 MB.
+
 ## Run it
 
 ```bash
@@ -28,7 +32,7 @@ Builds, installs to `/Applications` and launches. Needs only the Xcode command l
 | UI framework | SwiftUI | AppKit |
 | Builds with | full Xcode | command line tools |
 | Binary (stripped, arm64) | not measured | 173 KB |
-| Idle | not measured | about 62 MB RSS, 0% CPU |
+| Memory (Activity Monitor) | not measured | 18.7 MB with a window pinned |
 
 Upstream could not be built here without full Xcode, so its binary size and memory are not compared. Numbers above were measured on macOS 27, Apple Silicon.
 
