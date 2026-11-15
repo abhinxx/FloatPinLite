@@ -8,5 +8,5 @@ Slimmed fork of upstream 1.0.
 - Removed sounds, pin animations, shake-tuning sliders (fixed at sensible values), unused opacity setting.
 - Shake detection no longer looks up windows on every click, only when a drag starts.
 - Setup window no longer polls with a timer.
-- Removed demo images, release automation, issue templates. Repo is ~0.5 MB instead of ~6 MB.
+- Removed demo images, release automation, issue templates. Working tree is ~1 MB instead of ~6 MB.
 - Bundle ID is now com.abhinxx.FloatPin.
