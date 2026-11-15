@@ -30,6 +30,9 @@ private final class AxisShake {
 
 /// Detects a back-and-forth shake from a stream of positions (either axis).
 final class ShakeTracker {
+    static let reversals = 6          // direction changes needed...
+    static let within: TimeInterval = 2   // ...inside this many seconds
+    static let swing: CGFloat = 30    // each swing at least this many points
     private let x = AxisShake()
     private let y = AxisShake()
 
@@ -38,12 +41,9 @@ final class ShakeTracker {
     /// Returns true once when a shake is detected.
     func feed(_ p: CGPoint) -> Bool {
         let t = ProcessInfo.processInfo.systemUptime
-        let swing = CGFloat(Prefs.shakeDistance)
-        let within = Prefs.shakeWindow
-        let need = Prefs.shakeReversals
-        let nx = x.feed(p.x, t, minSwing: swing, within: within)
-        let ny = y.feed(p.y, t, minSwing: swing, within: within)
-        if nx >= need || ny >= need { reset(); return true }
+        let nx = x.feed(p.x, t, minSwing: Self.swing, within: Self.within)
+        let ny = y.feed(p.y, t, minSwing: Self.swing, within: Self.within)
+        if nx >= Self.reversals || ny >= Self.reversals { reset(); return true }
         return false
     }
 }
@@ -58,6 +58,8 @@ final class ShakeMonitor {
     private var monitors: [Any] = []
     private let tracker = ShakeTracker()
     private var target: WinInfo?
+    private var downAt = CGPoint.zero
+    private var looked = false   // window lookup is deferred to the first drag, so plain clicks cost nothing
     private var armed = false
 
     func start() {
@@ -86,11 +88,15 @@ final class ShakeMonitor {
     private func mouseDown(_ e: NSEvent) {
         tracker.reset()
         armed = false
-        target = Prefs.shakeEnabled ? WindowList.window(at: location(e)) : nil
+        looked = false
+        target = nil
+        downAt = location(e)
     }
 
     private func mouseDragged(_ e: NSEvent) {
-        guard !armed, let t = target else { return }
+        guard !armed, Prefs.shakeEnabled else { return }
+        if !looked { looked = true; target = WindowList.window(at: downAt) }
+        guard let t = target else { return }
         guard tracker.feed(location(e)) else { return }
         // Make sure the window itself moved (you're dragging it, not selecting text in it).
         guard let now = WindowList.bounds(of: t.id),

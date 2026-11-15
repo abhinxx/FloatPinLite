@@ -1,14 +1,12 @@
 import AppKit
-import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem!
     private let shakeMonitor = ShakeMonitor()
     private let hotKey = HotKey()
     private var hotKeyOn: Bool?
-    private var onboardingWindow: NSWindow?
-    private var settingsWindow: NSWindow?
-    private var permissionModel: PermissionModel?
+    private var permissions: PermissionsWindow?
+    private var settings: SettingsWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Prefs.register()
@@ -25,10 +23,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Feedback the moment a shake is recognized; the pin happens when you let go.
         shakeMonitor.onArmed = {
-            if Prefs.playSound { NSSound(named: "Pop")?.play() }
             NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
         }
-        shakeMonitor.onShake = { window in PinManager.shared.toggle(window, sound: false) }
+        shakeMonitor.onShake = { window in PinManager.shared.toggle(window) }
         shakeMonitor.start()
 
         hotKey.action = { [weak self] in self?.pinFrontWindow() }
@@ -123,12 +120,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func unpinAll() { PinManager.shared.unpinAll() }
 
     @objc private func pinItem(_ sender: NSMenuItem) {
-        if let w = sender.representedObject as? WinInfo { PinManager.shared.toggle(w, sound: true) }
+        if let w = sender.representedObject as? WinInfo { PinManager.shared.toggle(w) }
     }
 
     @objc private func pinFrontWindow() {
         guard let w = WindowList.frontmostWindow() else { NSSound.beep(); return }
-        PinManager.shared.toggle(w, sound: true)
+        PinManager.shared.toggle(w)
     }
 
     @objc private func quit() { NSApp.terminate(nil) }
@@ -143,31 +140,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: Windows
 
     @objc func showOnboarding() {
-        if onboardingWindow == nil {
-            let model = PermissionModel()
-            model.onDone = { [weak self] in self?.onboardingWindow?.close() }
-            permissionModel = model
-            let w = NSWindow(contentViewController: NSHostingController(rootView: OnboardingView(model: model)))
-            w.title = "FloatPin Setup"
-            w.styleMask = [.titled, .closable]
-            w.isReleasedWhenClosed = false
-            w.center()
-            onboardingWindow = w
-        }
+        let w = permissions ?? PermissionsWindow()
+        permissions = w
+        w.refresh()
         NSApp.activate()
-        onboardingWindow?.makeKeyAndOrderFront(nil)
+        w.window.makeKeyAndOrderFront(nil)
     }
 
     @objc func showSettings() {
-        if settingsWindow == nil {
-            let w = NSWindow(contentViewController: NSHostingController(rootView: SettingsView()))
-            w.title = "FloatPin Settings"
-            w.styleMask = [.titled, .closable]
-            w.isReleasedWhenClosed = false
-            w.center()
-            settingsWindow = w
-        }
+        let w = settings ?? SettingsWindow()
+        settings = w
         NSApp.activate()
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        w.window.makeKeyAndOrderFront(nil)
     }
 }

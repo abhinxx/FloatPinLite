@@ -1,157 +1,139 @@
-import SwiftUI
+import AppKit
 import ServiceManagement
 
-// MARK: - Permissions onboarding
+// Plain AppKit on purpose: no SwiftUI runtime in memory, and it builds with
+// just the command line tools (SwiftUI's @State macros need full Xcode).
 
-final class PermissionModel: ObservableObject {
-    @Published var accessibility = Permissions.accessibility
-    @Published var screenRecording = Permissions.screenRecording
-    var onDone: (() -> Void)?
-    private var timer: Timer?
+private func text(_ s: String, small: Bool = false, bold: Bool = false) -> NSTextField {
+    let t = NSTextField(wrappingLabelWithString: s)
+    t.preferredMaxLayoutWidth = 380
+    if small { t.font = .systemFont(ofSize: 11); t.textColor = .secondaryLabelColor }
+    if bold { t.font = .boldSystemFont(ofSize: 13) }
+    return t
+}
 
-    init() {
-        // Poll so the checkmarks flip as soon as you grant access in System Settings.
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+private func window(_ title: String, _ rows: [NSView]) -> NSWindow {
+    let s = NSStackView(views: rows)
+    s.orientation = .vertical
+    s.alignment = .leading
+    s.spacing = 12
+    s.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
+    let w = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+    w.title = title
+    w.contentView = s
+    w.setContentSize(s.fittingSize)
+    w.isReleasedWhenClosed = false
+    w.center()
+    return w
+}
+
+// MARK: - Permissions
+
+/// Shows the two permissions with live status. Re-checks whenever the app
+/// becomes active again (i.e. when you come back from System Settings).
+final class PermissionsWindow: NSObject {
+    let window: NSWindow
+    private let axStatus = text("")
+    private let srStatus = text("")
+    private let axButton = NSButton(title: "Grant…", target: nil, action: nil)
+    private let srButton = NSButton(title: "Grant…", target: nil, action: nil)
+    private var observer: Any?
+
+    override init() {
+        let done = NSButton(title: "Done", target: nil, action: nil)
+        done.keyEquivalent = "\r"
+        let relaunch = NSButton(title: "Relaunch", target: nil, action: nil)
+        window = FloatPin.window("FloatPin Setup", [
+            text("Shake a window to keep it on top. FloatPin needs two permissions for that.", bold: true),
+            text("Accessibility: moves the real window under its pin and brings it forward on click.", small: true),
+            NSStackView(views: [axStatus, axButton]),
+            text("Screen Recording: shows a live copy of the pinned window. Frames stay in memory; nothing is saved or sent.", small: true),
+            NSStackView(views: [srStatus, srButton]),
+            text("Granted but still unchecked? macOS sometimes needs the app restarted.", small: true),
+            NSStackView(views: [relaunch, done]),
+        ])
+        super.init()
+        axButton.target = self; axButton.action = #selector(grantAX)
+        srButton.target = self; srButton.action = #selector(grantSR)
+        relaunch.target = self; relaunch.action = #selector(relaunchApp)
+        done.target = self; done.action = #selector(close)
+        observer = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
             self?.refresh()
         }
+        refresh()
     }
 
-    deinit { timer?.invalidate() }
+    deinit { if let observer { NotificationCenter.default.removeObserver(observer) } }
 
     func refresh() {
-        let ax = Permissions.accessibility
-        let sr = Permissions.screenRecording
-        if ax != accessibility { accessibility = ax }
-        if sr != screenRecording { screenRecording = sr }
+        let ax = Permissions.accessibility, sr = Permissions.screenRecording
+        axStatus.stringValue = ax ? "Accessibility: granted" : "Accessibility: not granted"
+        srStatus.stringValue = sr ? "Screen Recording: granted" : "Screen Recording: not granted"
+        axButton.isHidden = ax
+        srButton.isHidden = sr
     }
-}
 
-struct OnboardingView: View {
-    @ObservedObject var model: PermissionModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(spacing: 12) {
-                Image(systemName: "pin.fill").font(.largeTitle).foregroundStyle(Color.accentColor)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Welcome to FloatPin").font(.title2).bold()
-                    Text("Grab any window and shake it to keep it on top.")
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            PermissionRow(
-                title: "Accessibility",
-                detail: "When you click a pin, moves the real window to exactly where the pin is and brings it forward.",
-                granted: model.accessibility,
-                action: Permissions.requestAccessibility)
-
-            PermissionRow(
-                title: "Screen Recording",
-                detail: "Shows a live copy of the window you pinned. Nothing is saved or sent anywhere.",
-                granted: model.screenRecording,
-                action: Permissions.requestScreenRecording)
-
-            HStack {
-                Text("Granted it but still unchecked? macOS sometimes needs a restart of the app.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button("Relaunch") { Permissions.relaunch() }
-            }
-
-            HStack {
-                Spacer()
-                Button(model.accessibility && model.screenRecording ? "Start Pinning" : "Later") {
-                    model.onDone?()
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-        }
-        .padding(24)
-        .frame(width: 460)
-    }
-}
-
-struct PermissionRow: View {
-    let title: String
-    let detail: String
-    let granted: Bool
-    let action: () -> Void
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: granted ? "checkmark.circle.fill" : "circle")
-                .font(.title2)
-                .foregroundStyle(granted ? Color.green : Color.secondary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.headline)
-                Text(detail).font(.callout).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer()
-            if granted {
-                Text("Granted").foregroundStyle(Color.green)
-            } else {
-                Button("Grant…", action: action)
-            }
-        }
-    }
+    @objc private func grantAX() { Permissions.requestAccessibility() }
+    @objc private func grantSR() { Permissions.requestScreenRecording() }
+    @objc private func relaunchApp() { Permissions.relaunch() }
+    @objc private func close() { window.close() }
 }
 
 // MARK: - Settings
 
-struct SettingsView: View {
-    @AppStorage(K.shakeEnabled) private var shakeEnabled = true
-    @AppStorage(K.shakeReversals) private var reversals = 6
-    @AppStorage(K.shakeWindow) private var shakeWindow = 2.0
-    @AppStorage(K.shakeDistance) private var shakeDistance = 30.0
-    @AppStorage(K.clickThrough) private var clickThrough = false
-    @AppStorage(K.showBorder) private var showBorder = false
-    @AppStorage(K.frameRate) private var frameRate = 30
-    @AppStorage(K.hotkeyEnabled) private var hotkeyEnabled = true
-    @AppStorage(K.playSound) private var playSound = true
-    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+final class SettingsWindow: NSObject {
+    let window: NSWindow
+    private let fps = NSPopUpButton(frame: .zero, pullsDown: false)
+    private let login = NSButton(checkboxWithTitle: "Launch at login", target: nil, action: nil)
 
-    var body: some View {
-        Form {
-            Section("Shake to pin") {
-                Toggle("Shake a window to pin it", isOn: $shakeEnabled)
-                Stepper("Back-and-forth moves needed: \(reversals)", value: $reversals, in: 2...14)
-                Slider(value: $shakeWindow, in: 0.5...3, step: 0.25) {
-                    Text("Within \(shakeWindow, specifier: "%.2f") seconds")
-                }
-                Slider(value: $shakeDistance, in: 10...120, step: 5) {
-                    Text("Shake distance: \(Int(shakeDistance)) pt")
-                }
-                Text("Shake a pinned window again (or click its pin badge) to unpin it.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
+    override init() {
+        fps.addItems(withTitles: ["15 fps", "30 fps", "60 fps"])
+        let rate = Prefs.frameRate
+        fps.selectItem(at: rate <= 15 ? 0 : rate <= 30 ? 1 : 2)
+        let fpsRow = NSStackView(views: [NSTextField(labelWithString: "Frame rate"), fps])
 
-            Section("Pinned windows") {
-                Toggle("Click-through (clicks go to whatever is behind, so clicking a pin won't open it)", isOn: $clickThrough)
-                Toggle("Show colored border", isOn: $showBorder)
-                Picker("Frame rate", selection: $frameRate) {
-                    Text("10 fps").tag(10)
-                    Text("30 fps").tag(30)
-                    Text("60 fps").tag(60)
-                }
-            }
-
-            Section("General") {
-                Toggle("Pin the front window with ⌃⌥P", isOn: $hotkeyEnabled)
-                Toggle("Play sounds", isOn: $playSound)
-                Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, on in
-                        do {
-                            if on { try SMAppService.mainApp.register() }
-                            else { try SMAppService.mainApp.unregister() }
-                        } catch {}
-                        let actual = SMAppService.mainApp.status == .enabled
-                        if actual != on { launchAtLogin = actual }
-                    }
-            }
-        }
-        .formStyle(.grouped)
-        .frame(width: 480, height: 600)
+        window = FloatPin.window("FloatPin Settings", [
+            DefaultsCheck("Shake a window to pin it", key: K.shakeEnabled),
+            DefaultsCheck("Pin the front window with ⌃⌥P", key: K.hotkeyEnabled),
+            DefaultsCheck("Click-through (clicks pass to what's behind a pin)", key: K.clickThrough),
+            DefaultsCheck("Show colored border on pins", key: K.showBorder),
+            fpsRow,
+            login,
+            text("Shake a pinned window again, or click its pin badge, to unpin.", small: true),
+        ])
+        super.init()
+        fps.target = self; fps.action = #selector(fpsChanged)
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+        login.target = self; login.action = #selector(loginChanged)
     }
+
+    @objc private func fpsChanged() {
+        Prefs.d.set([15, 30, 60][fps.indexOfSelectedItem], forKey: K.frameRate)
+    }
+
+    @objc private func loginChanged() {
+        let on = login.state == .on
+        do { if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } } catch {}
+        login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+    }
+}
+
+/// A checkbox that reads and writes one UserDefaults bool.
+private final class DefaultsCheck: NSButton {
+    private let key: String
+
+    init(_ title: String, key: String) {
+        self.key = key
+        super.init(frame: .zero)
+        setButtonType(.switch)
+        self.title = title
+        state = Prefs.d.bool(forKey: key) ? .on : .off
+        target = self
+        action = #selector(toggled)
+    }
+
+    required init?(coder: NSCoder) { fatalError("not used") }
+
+    @objc private func toggled() { Prefs.d.set(state == .on, forKey: key) }
 }

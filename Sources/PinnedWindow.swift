@@ -357,37 +357,20 @@ final class PinnedWindow: NSObject {
         }
         let ws = NSWorkspace.shared.notificationCenter
         observers.append(ws.addObserver(forName: NSWorkspace.didActivateApplicationNotification,
-                                        object: nil, queue: .main) { [weak self] note in
-            self?.appActivated(note)
+                                        object: nil, queue: .main) { [weak self] _ in
+            self?.refreshVisibility()
         })
         watchFocus()
     }
 
-    /// First frame is on screen: a little lift so you can see it took, then
+    /// First frame is on screen: flash the badge so you can see it took, then
     /// step aside if you're still using that window.
     private func didAppear() {
-        lift()
         mirror.flashBadge()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
             guard let self, !self.closing, !self.dragging else { return }
             self.refreshVisibility()
         }
-    }
-
-    private func lift() {
-        let f = panel.frame
-        let up = f.insetBy(dx: -f.width * 0.015, dy: -f.height * 0.015)
-        NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.12
-            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            self.panel.animator().setFrame(up, display: true)
-        }, completionHandler: {
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.2
-                ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                self.panel.animator().setFrame(f, display: true)
-            }
-        })
     }
 
     func unpin() {
@@ -401,17 +384,7 @@ final class PinnedWindow: NSObject {
         stream?.stopCapture { _ in }
         stream = nil
         onClose?()
-
-        guard panel.isVisible else { panel.close(); return }
-        // Settle back down into the normal window stack.
-        let f = panel.frame
-        NSAnimationContext.runAnimationGroup({ ctx in
-            ctx.duration = 0.18
-            self.panel.animator().setFrame(f.insetBy(dx: f.width * 0.015, dy: f.height * 0.015), display: true)
-            self.panel.animator().alphaValue = 0
-        }, completionHandler: {
-            self.panel.close()
-        })
+        panel.close()
     }
 
     // MARK: Settings
@@ -463,7 +436,7 @@ final class PinnedWindow: NSObject {
         c.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(Prefs.frameRate))
         c.pixelFormat = kCVPixelFormatType_32BGRA
         c.showsCursor = false
-        c.queueDepth = 5
+        c.queueDepth = 3
         c.ignoreShadowsSingleWindow = true
         return c
     }
@@ -556,10 +529,6 @@ final class PinnedWindow: NSObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) { AXHelper.postClick(at: p) }
     }
 
-    private func appActivated(_ note: Notification) {
-        refreshVisibility()
-    }
-
     /// The one rule: tuck away only while the pinned window itself is the one
     /// you're using. Any other window, even another window of the same app,
     /// gets the pin floating on top of it.
@@ -617,10 +586,7 @@ final class PinnedWindow: NSObject {
 
     private func handleShake(_ p: NSPoint) {
         guard Prefs.shakeEnabled else { return }
-        if shake.feed(p) {
-            if Prefs.playSound { NSSound(named: "Bottle")?.play() }
-            unpin()
-        }
+        if shake.feed(p) { unpin() }
     }
 }
 
@@ -633,9 +599,8 @@ final class PinManager {
     var onNeedsPermission: (() -> Void)?
 
     /// Pins the window, or unpins it if it's already pinned.
-    func toggle(_ window: WinInfo, sound: Bool) {
+    func toggle(_ window: WinInfo) {
         if let existing = pins.first(where: { $0.source.id == window.id }) {
-            if Prefs.playSound { NSSound(named: "Bottle")?.play() }
             existing.unpin()
             return
         }
@@ -649,7 +614,6 @@ final class PinManager {
         }
         pins.append(p)
         p.start()
-        if sound && Prefs.playSound { NSSound(named: "Pop")?.play() }
         onChange?()
     }
 
